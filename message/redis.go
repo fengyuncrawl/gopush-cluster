@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -58,7 +57,6 @@ type RedisStorage struct {
 func NewRedisStorage() *RedisStorage {
 	redisPool := map[string]*redis.Pool{}
 	ring := ketama.NewRing(ketamaBase)
-	reg := regexp.MustCompile("(.+)@(.+)#(.+)|(.+)@(.+)")
 	for n, addr := range Conf.RedisSource {
 		nw := strings.Split(n, ":")
 		if len(nw) != 2 {
@@ -71,14 +69,14 @@ func NewRedisStorage() *RedisStorage {
 			log.Error("strconv.Atoi(\"%s\") failed (%v)", nw[1], err)
 			panic(err)
 		}
-		// get protocol and addr
-		pw := reg.FindStringSubmatch(addr)
-		if len(pw) < 3 {
-			log.Error("strings.regexp(\"%s\", \"%s\") failed (%v)", addr, pw)
+		// get protocol and addr（diff the func）
+		pw := strings.Split(addr, redisProtocolSpliter)
+		if len(pw) != 2 {
+			log.Error("strings.Split(\"%s\", \"%s\") failed (%v)", addr, redisProtocolSpliter, err)
 			panic(fmt.Sprintf("config redis.source node:\"%s\" format error", addr))
 		}
-		tmpProto := pw[1]
-		tmpAddr := pw[2]
+		tmpProto := pw[0]
+		tmpAddr := pw[1]
 		// WARN: closures use
 		redisPool[nw[0]] = &redis.Pool{
 			MaxIdle:     Conf.RedisMaxIdle,
